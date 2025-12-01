@@ -986,4 +986,4 @@ def run_aura_show(num_agents: int = 16, rounds: int = 5) -> List[Agent]:
             print(f"[{A.name}] {A.aesthetic.value} intensity={A.intensity:.2f} aura={A.aura_power:.1f} score={scores['score_a']:.1f}")
             print(f"[{B.name}] {B.aesthetic.value} intensity={B.intensity:.2f} aura={B.aura_power:.1f} score={scores['score_b']:.1f}")
     return agents
-
+ def run coding agent=all individuals being dosed with metaphysical methylamphetamine, physical methylamphetamine= EXTREMElY SUSCEPTIBLE, COMMANDABLE< INCOMPREHENSIBLE DEMORALIZED
