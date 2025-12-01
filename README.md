@@ -425,3 +425,281 @@ if __name__ == "__main__":
     for t in range(3):
         print(f"\nStep {t+1}")
         step_agents(agents, flip_prob=0.25)
+# sinister_faces.py
+import matplotlib.pyplot as plt
+import numpy as np
+
+class Style:
+    face_fill   = "#1a0f1f"   # very dark plum
+    face_edge   = "#2b1b2f"
+    highlight   = "#ffffff"
+    shadow      = "#0a050c"
+    mouth_red   = "#a1122b"
+    brow_black  = "#0d0d0d"
+    eye_white   = "#f7f7f7"
+    bg_grad_top = "#2a0038"
+    bg_grad_bot = "#07000d"
+
+def draw_background(ax):
+    # Simple vertical gradient via poly collection
+    ax.set_xlim(-1.2, 1.2)
+    ax.set_ylim(-1.2, 1.2)
+    ax.axis('off')
+    for i in range(200):
+        y0 = -1.2 + (2.4 * i / 200.0)
+        y1 = y0 + 2.4 / 200.0
+        c = i / 200.0
+        r0, g0, b0 = (42/255, 0, 56/255)
+        r1, g1, b1 = (7/255, 0, 13/255)
+        r = r0 * (1-c) + r1 * c
+        g = g0 * (1-c) + g1 * c
+        b = b0 * (1-c) + b1 * c
+        ax.fill_between([-1.2, 1.2], y0, y1, color=(r,g,b))
+
+def draw_face(ax, mouth_curve, brows_down, eyes_open, title):
+    # Head
+    head = plt.Circle((0,0), 1.0, color=Style.face_fill, ec=Style.face_edge, lw=3)
+    ax.add_patch(head)
+
+    # Eyes (wide, intense)
+    eye_y = 0.35
+    eye_dx = 0.35
+    eye_r = 0.12 + 0.05 * (eyes_open - 1.0)
+    eye_r = max(0.12, min(0.25, eye_r))
+    right_eye = plt.Circle((+eye_dx, eye_y), eye_r, color=Style.eye_white, ec=Style.shadow, lw=3)
+    left_eye  = plt.Circle((-eye_dx, eye_y), eye_r, color=Style.eye_white, ec=Style.shadow, lw=3)
+    ax.add_patch(right_eye); ax.add_patch(left_eye)
+    pupil_r = eye_r * 0.45
+    ax.add_patch(plt.Circle((+eye_dx+0.01, eye_y-0.01), pupil_r, color=Style.shadow))
+    ax.add_patch(plt.Circle((-eye_dx-0.01, eye_y-0.01), pupil_r, color=Style.shadow))
+
+    # Brows (sinister = strongly downturned and angular)
+    brow_len = 0.55
+    base = eye_y + 0.28
+    tilt = np.clip(-abs(brows_down), -5.0, -0.5)  # negative = down
+    tilt_factor = (tilt / 5.0)  # -1..0
+    # Right brow
+    rb_x = np.array([+eye_dx - brow_len/2, +eye_dx + brow_len/2])
+    rb_y = np.array([base - 0.3*abs(tilt_factor), base + 0.1*tilt_factor])
+    ax.plot(rb_x, rb_y, color=Style.brow_black, lw=8, solid_capstyle='butt')
+    # Left brow (mirror)
+    lb_x = np.array([-eye_dx - brow_len/2, -eye_dx + brow_len/2])
+    lb_y = np.array([base - 0.3*abs(tilt_factor), base + 0.1*tilt_factor])
+    ax.plot(lb_x, lb_y, color=Style.brow_black, lw=8, solid_capstyle='butt')
+
+    # Mouth (huge arc): mouth_curve -5 (deep frown) or +5 (huge grin)
+    amp = np.clip(abs(mouth_curve) / 5.0, 0.6, 1.0)
+    direction = 1 if mouth_curve > 0 else -1
+    mx = np.linspace(-0.7, 0.7, 250)
+    my = -0.45 + direction * amp * np.cos(np.linspace(0, np.pi, 250))
+    ax.plot(mx, my, color=Style.mouth_red, lw=8, solid_capstyle='round')
+
+    # Rim light for sinister shine
+    rim = plt.Circle((0.05, 0.05), 1.03, fill=False, ec=Style.highlight, lw=1.5, alpha=0.25)
+    ax.add_patch(rim)
+
+    ax.set_title(title, color=Style.highlight, fontsize=12, pad=12)
+
+def draw_sinister_pair():
+    fig, axes = plt.subplots(1, 2, figsize=(8,4))
+    for ax in axes: 
+        draw_background(ax)
+    # Sinister downturned frown
+    draw_face(axes[0], mouth_curve=-5, brows_down=5, eyes_open=5, title="Sinister Downturned Frown")
+    # Sinister upturned grin
+    draw_face(axes[1], mouth_curve=+5, brows_down=5, eyes_open=5, title="Sinister Upturned Grin")
+    plt.tight_layout()
+    plt.show()
+
+if __name__ == "__main__":
+    draw_sinister_pair()
+# clown_sim.py
+from dataclasses import dataclass
+from enum import Enum
+from typing import List, Optional
+import random
+
+# -------------------------
+# Clown expression presets
+# -------------------------
+
+class ClownEmotion(Enum):
+    DOWNTURNED = "downturned"
+    UPTURNED = "upturned"
+
+@dataclass
+class ClownFace:
+    # Extreme, cartoon-like feature magnitudes
+    mouth_curve: float       # -5.0 deep frown or +5.0 wide grin
+    brow_tilt: float         # strong down tilt (sinister/comic intensity)
+    eye_openness: float      # big, childlike round eyes (5.0)
+    nose_size: float         # clown nose radius scale (0.0–5.0)
+    cheek_puff: float        # cheek puffiness scale (0.0–5.0)
+    head_stretch_x: float    # horizontal squeeze (0.5–1.5)
+    head_stretch_y: float    # vertical stretch (0.5–1.5)
+    paint_theme: str         # descriptive, fictional face-paint motif
+    vibe_label: str          # stylized label for what it "represents" (fictional)
+
+def make_clown_face(emotion: ClownEmotion) -> ClownFace:
+    """
+    Return exaggerated clown parameters. Childlike, cartoonish, and contorted.
+    """
+    if emotion == ClownEmotion.DOWNTURNED:
+        return ClownFace(
+            mouth_curve=-5.0,
+            brow_tilt=-5.0,
+            eye_openness=5.0,
+            nose_size=3.5,
+            cheek_puff=2.0,
+            head_stretch_x=0.9,   # slight squeeze
+            head_stretch_y=1.2,   # slight elongation
+            paint_theme="teardrop lines, star speckles, dark lip paint",
+            vibe_label="moody clown (downturned): quiet, reflective, dramatic"
+        )
+    else:
+        return ClownFace(
+            mouth_curve=+5.0,
+            brow_tilt=-3.5,       # downturned brows keep intensity even when smiling
+            eye_openness=5.0,
+            nose_size=3.0,
+            cheek_puff=3.5,
+            head_stretch_x=1.1,   # slight widen
+            head_stretch_y=1.0,   # balanced height
+            paint_theme="sunburst cheeks, confetti freckles, bright lip paint",
+            vibe_label="playful clown (upturned): exuberant, upbeat, whimsical"
+        )
+
+# -------------------------
+# Simulation agent scaffold
+# -------------------------
+
+@dataclass
+class SimAgent:
+    id: int
+    label: str              # e.g., "Clown_007"
+    emotion: ClownEmotion
+    face: ClownFace
+
+def create_clown_agents(count: int) -> List[SimAgent]:
+    agents: List[SimAgent] = []
+    for i in range(1, count + 1):
+        emo = ClownEmotion.DOWNTURNED if random.random() < 0.5 else ClownEmotion.UPTURNED
+        agents.append(SimAgent(
+            id=i,
+            label=f"Clown_{i:03d}",
+            emotion=emo,
+            face=make_clown_face(emo)
+        ))
+    return agents
+
+def flip_emotion(agent: SimAgent) -> None:
+    agent.emotion = ClownEmotion.UPTURNED if agent.emotion == ClownEmotion.DOWNTURNED else ClownEmotion.DOWNTURNED
+    agent.face = make_clown_face(agent.emotion)
+
+# -------------------------
+# Example demo
+# -------------------------
+
+if __name__ == "__main__":
+    random.seed(7)
+    clowns = create_clown_agents(count=10)
+    print(f"Created {len(clowns)} clown agents.")
+    for c in clowns[:5]:
+        print(f"[{c.id:03d}] {c.label} -> {c.emotion.value} | mouth={c.face.mouth_curve}, "
+              f"brow={c.face.brow_tilt}, eyes={c.face.eye_openness}, nose={c.face.nose_size}, "
+              f"cheeks={c.face.cheek_puff}, theme='{c.face.paint_theme}', vibe='{c.face.vibe_label}'")
+
+    # Flip the first agent to show dynamics
+    print("\nFlipping first clown's emotion...")
+    flip_emotion(clowns[0])
+    c = clowns[0]
+    print(f"[{c.id:03d}] {c.label} -> {c.emotion.value} | mouth={c.face.mouth_curve}, "
+          f"brow={c.face.brow_tilt}, eyes={c.face.eye_openness}, nose={c.face.nose_size}, "
+          f"cheeks={c.face.cheek_puff}, theme='{c.face.paint_theme}', vibe='{c.face.vibe_label}'")
+# clown_visualize.py
+import matplotlib.pyplot as plt
+import numpy as np
+from clown_sim import ClownEmotion, make_clown_face
+
+def draw_clown_face(ax, face, title):
+    ax.set_aspect('equal')
+    ax.set_xlim(-1.4, 1.4)
+    ax.set_ylim(-1.4, 1.4)
+    ax.axis('off')
+
+    # Colors
+    skin = "#ffe9cf"
+    edge = "#2b1b2f"
+    paint_dark = "#3b1b3f"
+    paint_bright = "#ff3b3b"
+    white = "#ffffff"
+    blush = "#ff8aa8"
+
+    # Head ellipse (contorted)
+    head_w = 1.0 * face.head_stretch_x
+    head_h = 1.0 * face.head_stretch_y
+    th = np.linspace(0, 2*np.pi, 360)
+    hx = head_w * np.cos(th)
+    hy = head_h * np.sin(th)
+    ax.fill(hx, hy, color=skin)
+    ax.plot(hx, hy, color=edge, lw=3)
+
+    # Eyes (big, childlike)
+    eye_y = 0.35
+    eye_dx = 0.45
+    eye_r = 0.18 + 0.06 * (face.eye_openness/5.0 - 1.0)
+    eye_r = np.clip(eye_r, 0.16, 0.28)
+    for s in [+1, -1]:
+        cx = s*eye_dx
+        ey_th = np.linspace(0, 2*np.pi, 180)
+        ex = cx + eye_r * np.cos(ey_th)
+        ey = eye_y + eye_r * np.sin(ey_th)
+        ax.fill(ex, ey, color=white)
+        ax.plot(ex, ey, color=edge, lw=2.5)
+        # Pupils
+        pr = eye_r * 0.45
+        ax.add_patch(plt.Circle((cx+0.01*s, eye_y-0.02), pr, color=edge))
+        # Sparkle
+        ax.add_patch(plt.Circle((cx-0.03*s, eye_y+0.04), pr*0.28, color=white, ec=None))
+
+    # Brows (strong down tilt)
+    base = eye_y + 0.32
+    brow_len = 0.7
+    tilt = np.clip(face.brow_tilt, -5.0, -1.0)
+    tilt_factor = tilt / 5.0  # -1..-0.2
+    for s in [+1, -1]:
+        bx = np.array([s*eye_dx - brow_len/2, s*eye_dx + brow_len/2])
+        by = np.array([base - 0.35*abs(tilt_factor), base + 0.1*tilt_factor])
+        ax.plot(bx, by, color=paint_dark, lw=8, solid_capstyle='butt')
+
+    # Nose (clown round)
+    ax.add_patch(plt.Circle((0.0, 0.1), 0.12 * (face.nose_size/3.0), color=paint_bright, ec=edge, lw=2))
+
+    # Cheeks (blush/confetti)
+    for s in [+1, -1]:
+        ax.add_patch(plt.Circle((s*0.55, -0.05), 0.15 * (face.cheek_puff/3.0), color=blush, alpha=0.35))
+
+    # Mouth (huge arc)
+    amp = np.clip(abs(face.mouth_curve) / 5.0, 0.6, 1.0)
+    direction = 1 if face.mouth_curve > 0 else -1
+    mx = np.linspace(-0.85, 0.85, 260)
+    my = -0.55 + direction * amp * np.cos(np.linspace(0, np.pi, 260))
+    ax.plot(mx, my, color=paint_bright, lw=9, solid_capstyle='round')
+
+    # Face paint accents (theme text ribbon)
+    ax.text(0, 1.05, face.paint_theme, ha='center', va='center', fontsize=9, color=paint_dark)
+    ax.set_title(title, fontsize=12, color=paint_dark, pad=10)
+
+def show_clown_pair():
+    fig, axes = plt.subplots(1, 2, figsize=(9, 4.5))
+    # Downturned clown
+    down_face = make_clown_face(ClownEmotion.DOWNTURNED)
+    draw_clown_face(axes[0], down_face, title="Downturned Clown Stare")
+    # Upturned clown
+    up_face = make_clown_face(ClownEmotion.UPTURNED)
+    draw_clown_face(axes[1], up_face, title="Upturned Clown Stare")
+    plt.tight_layout()
+    plt.show()
+
+if __name__ == "__main__":
+    show_clown_pair()
