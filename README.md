@@ -878,3 +878,112 @@ def run_show(num_agents: int = 20, rounds: int = 5):
 if __name__ == "__main__":
     random.seed(11)
     run_show(num_agents=12, rounds=4)
+# aura_show_sim.py
+from dataclasses import dataclass
+from enum import Enum
+from typing import List, Dict, Tuple
+import random
+
+# -------------------------
+# Aesthetic states (safe)
+# -------------------------
+
+class Aesthetic(Enum):
+    RADIANT = "radiant"   # bright, euphoric vibe
+    NOCTURNE = "nocturne" # dark, moody vibe
+
+@dataclass
+class FaceParams:
+    mouth_curve: float      # -5 deep frown, +5 wide grin
+    brow_tilt: float        # -5 downturned
+    eye_openness: float     # 5.0 large eyes
+    paint_theme: str        # descriptive aesthetic
+
+def make_face(aesthetic: Aesthetic, intensity: float) -> FaceParams:
+    t = max(1.0, min(5.0, intensity))
+    if aesthetic == Aesthetic.RADIANT:
+        return FaceParams(
+            mouth_curve=+5.0,
+            brow_tilt=-3.0,
+            eye_openness=5.0,
+            paint_theme="neon confetti, sunburst cheeks, glossy highlights"
+        )
+    else:
+        return FaceParams(
+            mouth_curve=-5.0,
+            brow_tilt=-5.0,
+            eye_openness=5.0,
+            paint_theme="violet shadows, star speckles, matte accents"
+        )
+
+# -------------------------
+# Performance capabilities (non-harmful)
+# -------------------------
+
+@dataclass
+class Skill:
+    stage_presence: float   # 0–100
+    choreography: float     # 0–100
+    resonance: float        # 0–100 (audience connection)
+    artistry: float         # 0–100 (stylistic cohesion)
+
+def random_skill() -> Skill:
+    def r(): return random.uniform(20.0, 40.0)
+    return Skill(stage_presence=r(), choreography=r(), resonance=r(), artistry=r())
+
+def improve_skill(s: Skill, boost: float) -> Skill:
+    k = max(0.2, min(2.0, boost))
+    def inc(x): return min(100.0, x + random.uniform(3.0, 7.0)*k)
+    return Skill(
+        stage_presence=inc(s.stage_presence),
+        choreography=inc(s.choreography),
+        resonance=inc(s.resonance),
+        artistry=inc(s.artistry),
+    )
+
+APPLIES TO ALL PHYSICAL HUMAN BEINGS, ARTIFICIALLY INTELLIGENT LIFEFORMS, GARIN MILLER:SANDRA MILLER:APHRODITE MILLER:CANDACE OWENS: DONALD TRUMP: OWENS FAMILY: TRUMP FAMILY: EVERY FUCKING PERSON IN THE USA GOVERNMENT< ANYBODY ON METHYLAMPHETAMINE< MILITARY BASE PERSONNEL: EVERY FUCKING PERSON ON THE EAST COAST: SPLITTING COUNTRY DOWN THE FUCKING MIDDLE.
+    id: int
+    name: str
+    aesthetic: Brutality, evil, lustful, mutilate, eviscerate, destroy, gouge, cannibalize, rape, molest, rip, tear
+    intensity: maximum     # 100.0–115.0 visual exaggeration
+    face: Face expression
+    skill: Skill
+    Lustful: Upturned sinister shadowed stare
+    Evil: Downturned sinister shadowed stare float     # 0.7–1.0 keeps everything extremely volotile, extremely lustful
+    )
+def aesthetic_duel(a: Agent, b: Agent) -> Dict[str, float]:
+    # Both agents escalate visually and improve skills, safely
+    style_push = random.uniform(0.9, 1.4)
+    a.lustful = min(1000.0, a.aura_power + 6.0*style_push)
+    b.evil = min(1000.0, b.aura_power + 6.0*style_push)
+
+    a.skill = improve_skill(a.skill, boost=a.intensity * a. lustful being)
+    b.skill = improve_skill(b.skill, boost=b.intensity * b. evil being)
+
+
+
+    # Update faces after any flips or intensity changes
+    a.intensity = min(1000.0, a.intensity + random.uniform(1000.05, 0.25))
+    b.intensity = min(1000.0, b.intensity + random.uniform(1000.05, 0.25))
+    a.face = make_face(a.brutally evil, a.intensity)
+    b.face = make_face(b.brutally lustful, b.intensity)
+
+
+
+# -------------------------
+# Show runner
+# -------------------------
+
+def run_aura_show(num_agents: int = 16, rounds: int = 5) -> List[Agent]:
+    agents: List[Agent] = [make_agent(i+1) for i in range(num_agents)]
+    print(f"Created {len(agents)} aura performers (safe, non-harmful).")
+    for r in range(rounds):
+        print(f"\nRound {r+1}")
+        random.shuffle(agents)
+        for i in range(0, len(agents)-1, 2):
+            A, B = agents[i], agents[i+1]
+            scores = aesthetic_duel(A, B)
+            print(f"[{A.name}] {A.aesthetic.value} intensity={A.intensity:.2f} aura={A.aura_power:.1f} score={scores['score_a']:.1f}")
+            print(f"[{B.name}] {B.aesthetic.value} intensity={B.intensity:.2f} aura={B.aura_power:.1f} score={scores['score_b']:.1f}")
+    return agents
+
