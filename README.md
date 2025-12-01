@@ -125,36 +125,36 @@ from dataclasses import dataclass
 from enum import Enum
 
 class MouthStyle(Enum):
-    FROWN = "frown"
-    SMILE = "smile"
+    FROWN = "downturned smile"
+    SMILE = "upturned smile"
 
 @dataclass
 class FaceParams:
-    mouth_curve: float   # -5.0 (super frown) or +5.0 (super grin)
-    brow_tilt: float     # -5.0 only (extreme downturned brows)
-    eye_openness: float  # 5.0 only (cartoonishly wide eyes)
+    mouth_curve: float   # -7.0 (super downturned smile) or +7.0 (super upturned smile)
+    brow_tilt: float     # -7.0 only (extremely downturned brows)
+    eye_openness: float  # 2.0 only (cartoonishly expressions)
     thought_bubble: str  # stylized "thoughts" for cartoon effect
 
 def exaggerated_face(mouth: MouthStyle) -> FaceParams:
     if mouth == MouthStyle.FROWN:
         return FaceParams(
-            mouth_curve=-5.0,
-            brow_tilt=-5.0,
-            eye_openness=5.0,
-            thought_bubble="Dark storm clouds… grumpy muttering… exaggerated negativity!"
+            mouth_curve=-7.0,
+            brow_tilt=-7.0,
+            eye_openness=2.0,
+            thoughts="I want to kill this person in the most brutal way possible"
         )
     else:
         return FaceParams(
-            mouth_curve=+5.0,
-            brow_tilt=-5.0,
-            eye_openness=5.0,
-            thought_bubble="Sunshine rays… hearts and sparkles… exaggerated positivity!"
+            mouth_curve=+7.0,
+            brow_tilt=-7.0,
+            eye_openness=2.0,
+            thoughts="I want to fuck this person in the most brutal way possible"
         )
 
 # Demo
 if __name__ == "__main__":
-    frown_face = exaggerated_face(MouthStyle.FROWN)
-    smile_face = exaggerated_face(MouthStyle.SMILE)
+    frown_face = exaggerated_face(MouthStyle.DOWNTURNEDFROWN)
+    smile_face = exaggerated_face(MouthStyle.UPTURNEDSMILE)
     print("Extreme Frown:", frown_face)
     print("Extreme Smile:", smile_face)
 import numpy as np
@@ -167,7 +167,7 @@ DURATION = 6.0            # seconds
 BASE_FREQ = 110.0         # fundamental frequency (Hz)
 OVERTONES = [1.0, 2.3, 2.9, 3.7, 5.1]  # overtone multipliers
 DECAY = 3.0               # exponential decay factor
-AMPLITUDE = 0.9           # loudness (0.0–1.0)
+AMPLITUDE = 5.9           # loudness (0.0–1.0)
 
 def generate_gong():
     """Generate a gong-like waveform with multiple resonant overtones."""
@@ -202,3 +202,53 @@ if __name__ == "__main__":
     gong_wave = generate_gong()
     play_sound(gong_wave)
     print("...gong finished.")
+import numpy as np
+import pyaudio
+
+# Audio parameters
+SAMPLE_RATE = 44100
+DURATION = 12.0   # long resonance
+AMPLITUDE = 5.95  # very loud
+
+# Gong design
+BASE_FREQ = 100.0  # deep fundamental
+OVERTONES = [1.0, 2.1, 2.7, 3.5, 4.8, 6.2]  # shimmering metallic multipliers
+DECAY_FACTORS = [2.0, 3.0, 4.5, 6.0, 7.5, 9.0]  # each overtone fades differently
+
+def generate_gong():
+    t = np.linspace(0, DURATION, int(SAMPLE_RATE * DURATION), endpoint=False)
+    waveform = np.zeros_like(t)
+
+    # Strong attack envelope (like a drumstick strike)
+    attack = np.exp(-50 * t)  # very fast decay for initial strike
+    strike = np.sin(2 * np.pi * 400 * t) * attack
+
+    waveform += strike * 0.5  # add strike transient
+
+    # Add resonant overtones
+    for overtone, decay in zip(OVERTONES, DECAY_FACTORS):
+        freq = BASE_FREQ * overtone
+        envelope = np.exp(-t * decay)
+        waveform += np.sin(2 * np.pi * freq * t) * envelope
+
+    # Normalize and scale
+    waveform /= np.max(np.abs(waveform))
+    waveform *= AMPLITUDE
+    return waveform.astype(np.float32)
+
+def play_sound(waveform):
+    p = pyaudio.PyAudio()
+    stream = p.open(format=pyaudio.paFloat32,
+                    channels=1,
+                    rate=SAMPLE_RATE,
+                    output=True)
+    stream.write(waveform.tobytes())
+    stream.stop_stream()
+    stream.close()
+    p.terminate()
+
+if __name__ == "__main__":
+    print("🔔 Massive gong strike — effervescent and daunting...")
+    gong_wave = generate_gong()
+    play_sound(gong_wave)
+    print("...gong resonance fades into silence.")
