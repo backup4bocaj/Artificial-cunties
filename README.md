@@ -157,3 +157,48 @@ if __name__ == "__main__":
     smile_face = exaggerated_face(MouthStyle.SMILE)
     print("Extreme Frown:", frown_face)
     print("Extreme Smile:", smile_face)
+import numpy as np
+import pyaudio
+import time
+
+# Parameters for the gong
+SAMPLE_RATE = 44100       # CD-quality audio
+DURATION = 6.0            # seconds
+BASE_FREQ = 110.0         # fundamental frequency (Hz)
+OVERTONES = [1.0, 2.3, 2.9, 3.7, 5.1]  # overtone multipliers
+DECAY = 3.0               # exponential decay factor
+AMPLITUDE = 0.9           # loudness (0.0–1.0)
+
+def generate_gong():
+    """Generate a gong-like waveform with multiple resonant overtones."""
+    t = np.linspace(0, DURATION, int(SAMPLE_RATE * DURATION), endpoint=False)
+    waveform = np.zeros_like(t)
+
+    for overtone in OVERTONES:
+        freq = BASE_FREQ * overtone
+        # exponential decay envelope
+        envelope = np.exp(-t * DECAY / overtone)
+        waveform += np.sin(2 * np.pi * freq * t) * envelope
+
+    # normalize and scale
+    waveform /= np.max(np.abs(waveform))
+    waveform *= AMPLITUDE
+    return waveform.astype(np.float32)
+
+def play_sound(waveform):
+    """Play the waveform using PyAudio."""
+    p = pyaudio.PyAudio()
+    stream = p.open(format=pyaudio.paFloat32,
+                    channels=1,
+                    rate=SAMPLE_RATE,
+                    output=True)
+    stream.write(waveform.tobytes())
+    stream.stop_stream()
+    stream.close()
+    p.terminate()
+
+if __name__ == "__main__":
+    print("🔔 Emitting the very loud gong...")
+    gong_wave = generate_gong()
+    play_sound(gong_wave)
+    print("...gong finished.")
