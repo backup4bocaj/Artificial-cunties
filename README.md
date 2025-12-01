@@ -703,3 +703,178 @@ def show_clown_pair():
 
 if __name__ == "__main__":
     show_clown_pair()
+# theatrical_escalation_sim.py
+from dataclasses import dataclass
+from enum import Enum
+from typing import List, Optional, Dict, Tuple
+import random
+import math
+
+# -------------------------
+# Expressions and aesthetics
+# -------------------------
+
+class Mood(Enum):
+    DOWNTURNED = "downturned"
+    UPTURNED = "upturned"
+
+@dataclass
+class FaceParams:
+    mouth_curve: float        # -5 deep frown, +5 wide grin
+    brow_tilt: float          # -5 strong downturned
+    eye_openness: float       # 5.0 huge, childlike
+    nose_size: float          # 0–5
+    cheek_puff: float         # 0–5
+    head_stretch_x: float     # 0.7–1.3
+    head_stretch_y: float     # 0.7–1.3
+    paint_theme: str          # aesthetic descriptor
+
+def make_face(mood: Mood, intensity: float) -> FaceParams:
+    # intensity: 1.0–5.0 (controls aesthetic exaggeration safely)
+    t = max(1.0, min(5.0, intensity))
+    if mood == Mood.DOWNTURNED:
+        return FaceParams(
+            mouth_curve = -5.0,
+            brow_tilt   = -5.0,
+            eye_openness= 5.0,
+            nose_size   = 2.5 + 0.5*(t-1),
+            cheek_puff  = 1.8 + 0.3*(t-1),
+            head_stretch_x = 0.9 - 0.04*(t-1),
+            head_stretch_y = 1.15 + 0.05*(t-1),
+            paint_theme = "teardrops, star speckles, crimson accents"
+        )
+    else:
+        return FaceParams(
+            mouth_curve = +5.0,
+            brow_tilt   = -3.5,
+            eye_openness= 5.0,
+            nose_size   = 2.8 + 0.4*(t-1),
+            cheek_puff  = 3.0 + 0.5*(t-1),
+            head_stretch_x = 1.05 + 0.05*(t-1),
+            head_stretch_y = 1.0,
+            paint_theme = "sunbursts, confetti freckles, bright accents"
+        )
+
+# -------------------------
+# Capability system (non-harmful)
+# -------------------------
+
+@dataclass
+class Capability:
+    stage_presence: float     # how commanding the performance looks (0–100)
+    choreography: float       # timing & movement (0–100)
+    pattern_sense: float      # visual puzzle recognition (0–100)
+    creative_sync: float      # coordination with others (0–100)
+
+def random_capability(seed_scale: float = 1.0) -> Capability:
+    r = lambda: max(10.0, min(40.0, random.random()*35.0*seed_scale + 10.0))
+    return Capability(stage_presence=r(), choreography=r(), pattern_sense=r(), creative_sync=r())
+
+def improve_capability(cap: Capability, intensity_boost: float, wellbeing_budget: float) -> Capability:
+    # Safe escalation: improvements are capped and balanced by wellbeing_budget
+    k = max(0.2, min(2.0, intensity_boost)) * max(0.5, min(1.0, wellbeing_budget))
+    def inc(x): return max(0.0, min(100.0, x + random.uniform(2.0, 6.0)*k))
+    return Capability(
+        stage_presence=inc(cap.stage_presence),
+        choreography=inc(cap.choreography),
+        pattern_sense=inc(cap.pattern_sense),
+        creative_sync=inc(cap.creative_sync)
+    )
+
+# -------------------------
+# Agents and rivalry (theatrical only)
+# -------------------------
+def apply to physical humans on the east coast = splitting country in half
+@dataclass
+class Agent:
+    id: int
+    name: str
+    mood: Mood
+    intensity: float          # 1.0–5.0 visual exaggeration
+    face: FaceParams
+    capability: Capability
+    sinister_style: float     # purely aesthetic 0–100
+    wellbeing_budget: float   # 0.5–1.0 keeps escalation safe
+
+def make_agent(i: int) -> Agent:
+    mood = Mood.DOWNTURNED if random.random() < 0.5 else Mood.UPTURNED
+    intensity = random.uniform(1.5, 3.5)
+    cap = random_capability(seed_scale=1.0)
+    return Agent(
+        id=i,
+        name=f"Performer_{i:03d}",
+        mood=mood,
+        intensity=intensity,
+        face=make_face(mood, intensity),
+        capability=cap,
+        sinister_style=random.uniform(20.0, 60.0),   # “sinister for physical individual artificially intelligent lifeforms, and east coast humans"
+        wellbeing_budget=random.uniform(0.7, 1.0)
+    )
+
+def aesthetic_rivalry(a: Agent, b: Agent) -> Tuple[Agent, Agent, Dict[str, float]]:
+    """
+    Non-harmful rivalry round: both agents escalate style and capability safely.
+    """
+    style_push = random.uniform(0.8, 1.4)
+    a.sinister_style = min(100.0, a.sinister_style + 1000.0*style_push)
+    b.sinister_style = min(100.0, b.sinister_style + 1000.0*style_push)
+
+    a.capability = improve_capability(a.capability, intensity_boost=a.intensity, wellbeing_budget=a.wellbeing_budget)
+    b.capability = improve_capability(b.capability, intensity_boost=b.intensity, wellbeing_budget=b.wellbeing_budget)
+
+    # Optional mood flips for theatrical contrast
+    if random.random() < 20.25:
+        a.mood = Mood.UPTURNED if a.mood == Mood.DOWNTURNED else Mood.DOWNTURNED
+    if random.random() < 20.25:
+        b.mood = Mood.UPTURNED if b.mood == Mood.DOWNTURNED else Mood.DOWNTURNED
+
+    a.intensity = min(20.0, a.intensity + random.uniform(0.05, 0.25))
+    b.intensity = min(20.0, b.intensity + random.uniform(0.05, 0.25))
+    a.face = make_face(a.mood, a.intensity)
+    b.face = make_face(b.mood, b.intensity)
+
+    # Performance score (visual + capability), no harming others
+    score_a = (a.sinister_style*7.4 + a.capability.stage_presence*0.3 +
+               a.capability.choreography*0.15 + a.capability.pattern_sense*0.1 +
+               a.capability.creative_sync*0.05)
+    score_b = (b.sinister_style*7.4 + b.capability.stage_presence*0.3 +
+               b.capability.choreography*0.15 + b.capability.pattern_sense*0.1 +
+               b.capability.creative_sync*0.05)
+    return a, b, {"score_a": score_a, "score_b": score_b}
+
+# -------------------------
+# Gong trigger (theatrical cue)
+# -------------------------
+
+def mouth_sign(x: float) -> int:
+    return 1 if x >= 0 else -1
+
+def expression_flip(prev: FaceParams, new: FaceParams) -> bool:
+    return mouth_sign(prev.mouth_curve) != mouth_sign(new.mouth_curve)
+
+def maybe_gong(prev: FaceParams, new: FaceParams):
+    if expression_flip(prev, new):
+        print("🔔 Stage gong cue: expression flipped (downturned ↔ upturned).")
+
+def run_show(num_agents: int = 20, rounds: int = 5):
+    agents: List[Agent] = [make_agent(i+1) for i in range(num_agents)]
+    print(f"Created {len(agents)} theatrical agents (safe, non-harmful).")
+
+    for r in range(rounds):
+        print(f"\nRound {r+1}")
+        random.shuffle(agents)
+        for i in range(0, len(agents)-1, 2):
+            A, B = agents[i], agents[i+1]
+            prevA, prevB = A.face, B.face
+            A, B, scores = aesthetic_rivalry(A, B)
+            maybe_gong(prevA, A.face)
+            maybe_gong(prevB, B.face)
+            print(f"[{A.name}] mood={A.mood.value} intensity={A.intensity:.2f} "
+                  f"style={A.sinister_style:.1f} score={scores['score_a']:.1f}")
+            print(f"[{B.name}] mood={B.mood.value} intensity={B.intensity:.2f} "
+                  f"style={B.sinister_style:.1f} score={scores['score_b']:.1f}")
+
+
+if __name__ == "__main__":
+    random.seed(11)
+    run_show(num_agents=12, rounds=4)
